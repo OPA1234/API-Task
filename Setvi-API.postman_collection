@@ -1,0 +1,692 @@
+{
+	"info": {
+		"_postman_id": "a29659c3-7a2f-4a8b-9d54-c3277f2aa62b",
+		"name": "Setvi API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "30665874"
+	},
+	"item": [
+		{
+			"name": "upload free text",
+			"item": [
+				{
+					"name": "upload-free-text-positive flow - data driven",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// ---------- parse response ----------\r",
+									"let json = {};\r",
+									"try {\r",
+									"    json = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    json = {};\r",
+									"}\r",
+									"\r",
+									"// ---------- helper ----------\r",
+									"function isUnauthorizedEnvelope(body) {\r",
+									"    return (\r",
+									"        body &&\r",
+									"        body.error_code === \"Unauthorized\" &&\r",
+									"        body.isSuccess === false\r",
+									"    );\r",
+									"}\r",
+									"\r",
+									"// ---------- data ----------\r",
+									"let caseName = \"single run\";\r",
+									"let expectedItem = \"\";\r",
+									"\r",
+									"if (pm.iterationData && typeof pm.iterationData === \"function\") {\r",
+									"    const data = pm.iterationData();\r",
+									"    if (data) {\r",
+									"        const rawName = data.get(\"name\");\r",
+									"        const rawExpectedItem = data.get(\"expectedItem\");\r",
+									"\r",
+									"        if (rawName) caseName = String(rawName);\r",
+									"        if (rawExpectedItem) expectedItem = String(rawExpectedItem).toLowerCase();\r",
+									"    }\r",
+									"}\r",
+									"if (!expectedItem) {\r",
+									"    expectedItem = \"cutting board\";\r",
+									"}\r",
+									"\r",
+									"// ---------- tests ----------\r",
+									"\r",
+									"// 1) Status must be 200\r",
+									"pm.test(`Status code is 200 for case: ${caseName}`, function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// 2) Must NOT return Unauthorized (this is the main failing assertion now)\r",
+									"const unauthorized = isUnauthorizedEnvelope(json);\r",
+									"pm.test(\"Positive: no Unauthorized in response body\", function () {\r",
+									"    pm.expect(\r",
+									"        unauthorized,\r",
+									"        \"Valid RFQ request returned Unauthorized in response body\"\r",
+									"    ).to.be.false;\r",
+									"});\r",
+									"\r",
+									"// 3) Candidates list present and not empty\r",
+									"pm.test(\"Candidates list is present and not empty\", function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, no candidates list returned\");\r",
+									"    } else {\r",
+									"        pm.expect(json.candidates, \"candidates array should exist\").to.be.an(\"array\");\r",
+									"        pm.expect(json.candidates.length, \"candidates should not be empty\").to.be.greaterThan(0);\r",
+									"    }\r",
+									"});\r",
+									"\r",
+									"// 4) At least one candidate contains expectedItem\r",
+									"pm.test(`At least one candidate contains '${expectedItem}'`, function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, cannot verify candidates against expectedItem\");\r",
+									"    } else {\r",
+									"        pm.expect(expectedItem, \"expectedItem must be set\").to.not.be.empty;\r",
+									"\r",
+									"        const hasItem = json.candidates.some(function (c) {\r",
+									"            const name = ((c.name || c.title || \"\") + \"\").toLowerCase();\r",
+									"            return name.includes(expectedItem);\r",
+									"        });\r",
+									"\r",
+									"        pm.expect(hasItem, \"no candidate contains '\" + expectedItem + \"'\").to.be.true;\r",
+									"    }\r",
+									"});\r",
+									"\r",
+									"// 5) At least one candidate has similarity/confidence\r",
+									"pm.test(\"At least one candidate has similarity or confidence score\", function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, no similarity/confidence to verify\");\r",
+									"    } else {\r",
+									"        const hasScore = json.candidates.some(function (c) {\r",
+									"            return (\r",
+									"                typeof c.similarity === \"number\" ||\r",
+									"                typeof c.confidence === \"number\"\r",
+									"            );\r",
+									"        });\r",
+									"        pm.expect(hasScore, \"no candidate has similarity/confidence score\").to.be.true;\r",
+									"    }\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"statusId\": \"string\",\r\n  \"text\": {{text}},\r\n  \"topK\": 3,\r\n  \"threshold\": 0.5,\r\n  \"enablePrivateLabelRanking\": true,\r\n  \"enableStockProductRanking\": false,\r\n  \"enableVendorRanking\": false,\r\n  \"enableProductRanking\": false,\r\n  \"useOldReranking\": true\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{devBaseUrl}}/api/rfq/upload-free-text",
+							"host": [
+								"{{devBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"rfq",
+								"upload-free-text"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload-free-text-negative flow - empty text",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// ---------- parse response ----------\r",
+									"let json = {};\r",
+									"try {\r",
+									"    json = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    json = {};\r",
+									"}\r",
+									"\r",
+									"// helper reused locally\r",
+									"function isUnauthorizedEnvelope(body) {\r",
+									"    return (\r",
+									"        body &&\r",
+									"        body.error_code === \"Unauthorized\" &&\r",
+									"        body.isSuccess === false\r",
+									"    );\r",
+									"}\r",
+									"\r",
+									"// ---------- data ----------\r",
+									"let caseName = \"single run\";\r",
+									"if (pm.iterationData && typeof pm.iterationData === \"function\") {\r",
+									"    const data = pm.iterationData();\r",
+									"    if (data && data.get(\"name\")) {\r",
+									"        caseName = String(data.get(\"name\"));\r",
+									"    }\r",
+									"}\r",
+									"\r",
+									"// ---------- tests ----------\r",
+									"\r",
+									"// 1) 200 status\r",
+									"pm.test(`Status code is 200 for free-text negative case: ${caseName}`, function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// 2) No Unauthorized\r",
+									"pm.test(\"Free-text negative: no Unauthorized error in response body\", function () {\r",
+									"    pm.expect(\r",
+									"        isUnauthorizedEnvelope(json),\r",
+									"        \"Free-text negative input returned Unauthorized instead of validation behaviour\"\r",
+									"    ).to.be.false;\r",
+									"});\r",
+									"\r",
+									"// 3) Expect no candidates or clear error\r",
+									"pm.test(\"Free-text negative: empty text should not produce valid candidates\", function () {\r",
+									"    const candidatesArray = Array.isArray(json.candidates) ? json.candidates : [];\r",
+									"    const hasNoCandidates = candidatesArray.length === 0;\r",
+									"    const hasError = !!(json.error_code || json.message);\r",
+									"\r",
+									"    const isUnauthorized = json.error_code === \"Unauthorized\";\r",
+									"\r",
+									"    pm.expect(\r",
+									"        (hasNoCandidates || hasError) && !isUnauthorized,\r",
+									"        \"Empty/whitespace text returned Unauthorized instead of proper validation behaviour\"\r",
+									"    ).to.be.true;\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						},
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"statusId\": \"string\",\r\n  \"text\": {{text}},\r\n  \"topK\": 3,\r\n  \"threshold\": 0.5,\r\n  \"enablePrivateLabelRanking\": true,\r\n  \"enableStockProductRanking\": false,\r\n  \"enableVendorRanking\": false,\r\n  \"enableProductRanking\": false,\r\n  \"useOldReranking\": true\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{devBaseUrl}}/api/rfq/upload-free-text",
+							"host": [
+								"{{devBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"rfq",
+								"upload-free-text"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "upload url html",
+			"item": [
+				{
+					"name": "upload-url-html-possitive flow - data driven",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// ---------- parse response ----------\r",
+									"let json = {};\r",
+									"try {\r",
+									"    json = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    json = {};\r",
+									"}\r",
+									"\r",
+									"// ---------- helper ----------\r",
+									"function isUnauthorizedEnvelope(body) {\r",
+									"    return (\r",
+									"        body &&\r",
+									"        body.error_code === \"Unauthorized\" &&\r",
+									"        body.isSuccess === false\r",
+									"    );\r",
+									"}\r",
+									"\r",
+									"// ---------- data ----------\r",
+									"let caseName = \"single run\";\r",
+									"let expectedItem = \"\";\r",
+									"\r",
+									"if (pm.iterationData && typeof pm.iterationData === \"function\") {\r",
+									"    const data = pm.iterationData();\r",
+									"    if (data) {\r",
+									"        const rawName = data.get(\"name\");\r",
+									"        const rawExpectedItem = data.get(\"expectedItem\");\r",
+									"\r",
+									"        if (rawName) {\r",
+									"            caseName = String(rawName);\r",
+									"        }\r",
+									"        if (rawExpectedItem) {\r",
+									"            expectedItem = String(rawExpectedItem).toLowerCase();\r",
+									"        }\r",
+									"    }\r",
+									"}\r",
+									"\r",
+									"// default for manual run (pick what fits best)\r",
+									"if (!expectedItem) {\r",
+									"    expectedItem = \"cutting board\";\r",
+									"}\r",
+									"\r",
+									"// ---------- tests ----------\r",
+									"\r",
+									"// 1) Status must be 200\r",
+									"pm.test(`Status code is 200 for URL case: ${caseName}`, function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// 2) Must NOT return Unauthorized\r",
+									"const unauthorized = isUnauthorizedEnvelope(json);\r",
+									"\r",
+									"pm.test(\"URL positive: no Unauthorized in response body\", function () {\r",
+									"    pm.expect(\r",
+									"        unauthorized,\r",
+									"        \"Valid upload-url-html request returned Unauthorized in response body\"\r",
+									"    ).to.be.false;\r",
+									"});\r",
+									"\r",
+									"// 3) Candidates list present and not empty\r",
+									"pm.test(\"URL candidates list is present and not empty\", function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, no candidates list returned\");\r",
+									"    } else {\r",
+									"        pm.expect(json.candidates, \"candidates array should exist\").to.be.an(\"array\");\r",
+									"        pm.expect(json.candidates.length, \"candidates should not be empty\").to.be.greaterThan(0);\r",
+									"    }\r",
+									"});\r",
+									"\r",
+									"// 4) At least one candidate contains expectedItem\r",
+									"pm.test(`At least one URL candidate contains '${expectedItem}'`, function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, cannot verify candidates against expectedItem\");\r",
+									"    } else {\r",
+									"        pm.expect(expectedItem, \"expectedItem must be set\").to.not.be.empty;\r",
+									"\r",
+									"        const hasItem = json.candidates.some(function (c) {\r",
+									"            const name = ((c.name || c.title || \"\") + \"\").toLowerCase();\r",
+									"            return name.includes(expectedItem);\r",
+									"        });\r",
+									"\r",
+									"        pm.expect(hasItem, \"no candidate contains '\" + expectedItem + \"'\").to.be.true;\r",
+									"    }\r",
+									"});\r",
+									"\r",
+									"// 5) At least one candidate has similarity/confidence\r",
+									"pm.test(\"At least one URL candidate has similarity or confidence score\", function () {\r",
+									"    if (unauthorized) {\r",
+									"        pm.expect.fail(\"Blocked: response is Unauthorized, no similarity/confidence to verify\");\r",
+									"    } else {\r",
+									"        const hasScore = json.candidates.some(function (c) {\r",
+									"            return (\r",
+									"                typeof c.similarity === \"number\" ||\r",
+									"                typeof c.confidence === \"number\"\r",
+									"            );\r",
+									"        });\r",
+									"        pm.expect(hasScore, \"no candidate has similarity/confidence score\").to.be.true;\r",
+									"    }\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "Authorization",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"url\": \"{{url}}\",\r\n  \"topK\": 3,\r\n  \"threshold\": 0.5,\r\n  \"enablePrivateLabelRanking\": false,\r\n  \"enableStockProductRanking\": false,\r\n  \"enableVendorRanking\": false,\r\n  \"enableProductRanking\": false,\r\n  \"useOldReranking\": true\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{devBaseUrl}}/api/rfq/upload-url-html",
+							"host": [
+								"{{devBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"rfq",
+								"upload-url-html"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload-url-htm -negative flow - empty/invalid URL",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let json = {};\r",
+									"try {\r",
+									"    json = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    json = {};\r",
+									"}\r",
+									"\r",
+									"function isUnauthorizedEnvelope(body) {\r",
+									"    return (\r",
+									"        body &&\r",
+									"        body.error_code === \"Unauthorized\" &&\r",
+									"        body.isSuccess === false\r",
+									"    );\r",
+									"}\r",
+									"\r",
+									"let caseName = \"single run\";\r",
+									"if (pm.iterationData && typeof pm.iterationData === \"function\") {\r",
+									"    const data = pm.iterationData();\r",
+									"    if (data && data.get(\"name\")) {\r",
+									"        caseName = String(data.get(\"name\"));\r",
+									"    }\r",
+									"}\r",
+									"\r",
+									"// 1) 200 status\r",
+									"pm.test(`Status code is 200 for URL negative case: ${caseName}`, function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// 2) No Unauthorized\r",
+									"pm.test(\"URL negative (empty/invalid): no Unauthorized in response body\", function () {\r",
+									"    pm.expect(\r",
+									"        isUnauthorizedEnvelope(json),\r",
+									"        \"Empty/invalid URL request returned Unauthorized instead of validation result\"\r",
+									"    ).to.be.false;\r",
+									"});\r",
+									"\r",
+									"// 3) Should not treat these as valid product URLs\r",
+									"pm.test(\"URL negative (empty/invalid): should not produce valid candidates\", function () {\r",
+									"    const candidatesArray = Array.isArray(json.candidates) ? json.candidates : [];\r",
+									"    const hasNoCandidates = candidatesArray.length === 0;\r",
+									"    const hasError = !!(json.error_code || json.message);\r",
+									"    const isUnauthorized = json.error_code === \"Unauthorized\";\r",
+									"\r",
+									"    pm.expect(\r",
+									"        (hasNoCandidates || hasError) && !isUnauthorized,\r",
+									"        \"Empty/invalid URL returned Unauthorized instead of proper validation (empty candidates or clear non-auth error)\"\r",
+									"    ).to.be.true;\r",
+									"});\r",
+									"\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"url\": \"{{url}}\",\r\n  \"topK\": 3,\r\n  \"threshold\": 0.5,\r\n  \"enablePrivateLabelRanking\": false,\r\n  \"enableStockProductRanking\": false,\r\n  \"enableVendorRanking\": false,\r\n  \"enableProductRanking\": false,\r\n  \"useOldReranking\": true\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{devBaseUrl}}/api/rfq/upload-url-html",
+							"host": [
+								"{{devBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"rfq",
+								"upload-url-html"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "upload-url-html-negative flow - no product",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"let json = {};\r",
+									"try {\r",
+									"    json = pm.response.json();\r",
+									"} catch (e) {\r",
+									"    json = {};\r",
+									"}\r",
+									"\r",
+									"function isUnauthorizedEnvelope(body) {\r",
+									"    return (\r",
+									"        body &&\r",
+									"        body.error_code === \"Unauthorized\" &&\r",
+									"        body.isSuccess === false\r",
+									"    );\r",
+									"}\r",
+									"\r",
+									"let caseName = \"single run\";\r",
+									"if (pm.iterationData && typeof pm.iterationData === \"function\") {\r",
+									"    const data = pm.iterationData();\r",
+									"    if (data && data.get(\"name\")) {\r",
+									"        caseName = String(data.get(\"name\"));\r",
+									"    }\r",
+									"}\r",
+									"\r",
+									"// 1) 200 status\r",
+									"pm.test(`Status code is 200 for URL no-product case: ${caseName}`, function () {\r",
+									"    pm.response.to.have.status(200);\r",
+									"});\r",
+									"\r",
+									"// 2) No Unauthorized\r",
+									"pm.test(\"URL no-product: no Unauthorized in response body\", function () {\r",
+									"    pm.expect(\r",
+									"        isUnauthorizedEnvelope(json),\r",
+									"        \"No-product URL request returned Unauthorized instead of a meaningful result\"\r",
+									"    ).to.be.false;\r",
+									"});\r",
+									"\r",
+									"\r",
+									"// 3) Page without product data should not produce valid candidates\r",
+									"pm.test(\"URL no-product: page without product data handled gracefully\", function () {\r",
+									"    const candidatesArray = Array.isArray(json.candidates) ? json.candidates : [];\r",
+									"    const hasNoCandidates = candidatesArray.length === 0;\r",
+									"    const hasError = !!(json.error_code || json.message);\r",
+									"    const isUnauthorized = json.error_code === \"Unauthorized\";\r",
+									"\r",
+									"    pm.expect(\r",
+									"        (hasNoCandidates || hasError) && !isUnauthorized,\r",
+									"        \"No-product URL returned Unauthorized instead of empty candidates or a specific non-auth error\"\r",
+									"    ).to.be.true;\r",
+									"});\r",
+									""
+								],
+								"type": "text/javascript",
+								"packages": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Accept",
+								"value": "text/plain",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"url\": \"{{url}}\",\r\n  \"topK\": 3,\r\n  \"threshold\": 0.5,\r\n  \"enablePrivateLabelRanking\": false,\r\n  \"enableStockProductRanking\": false,\r\n  \"enableVendorRanking\": false,\r\n  \"enableProductRanking\": false,\r\n  \"useOldReranking\": true\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{devBaseUrl}}/api/rfq/upload-url-html",
+							"host": [
+								"{{devBaseUrl}}"
+							],
+							"path": [
+								"api",
+								"rfq",
+								"upload-url-html"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"packages": {},
+				"exec": [
+					""
+				]
+			}
+		}
+	]
+}
