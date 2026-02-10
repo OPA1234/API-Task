@@ -10,7 +10,7 @@ This repository contains a comprehensive Postman collection for testing the Setv
 
 ```
 ├── Setvi-API.postman_collection.json    # Main Postman collection
-├── rfq-requests-data sets.zip                        # CSV/JSON data files for Collection Runner
+├── rfq-requests-data sets.zip           # CSV/JSON data files for Collection Runner
 ├── bug-report-upload-free-text.md       # Bug report for upload-free-text endpoint
 ├── bug-report-upload-url-html.md        # Bug report for upload-url-html endpoint
 ```
